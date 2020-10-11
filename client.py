@@ -32,14 +32,23 @@ def timerHandler():
     global timer
     timer = ['n'] * BUFFER_SIZE
 
+def computeCheckSum(binary_data):
+    
+
 def createPacket():
     global transmission_index
+    global total_data
     # create header except checksum
-    h_field_1 = "{:032b}".format(transmission_index)
+    # sequence no
+    h_field_1 = "{:032b}".format(total_data[transmission_index][1])
+    # signifies this is a data datagram
     h_field_3 = "0101010101010101"
     # calculate checksum
-    data_packet = total_data[transmission_index]
+    data_packet = total_data[transmission_index][0]
+    binary_data_array = ["{:08b}".format(i) for i in bytearray(data_packet, "utf-8")]
+    computeCheckSum(binary_data_array)
     # add it to the data
+
     return 
 
 def transmissionHandler():
@@ -52,6 +61,7 @@ def transmissionHandler():
             # create packet
             createPacket()
             # update timer of startInd
+            timerHandler()
             # send the data
 
 
@@ -72,7 +82,7 @@ def readFile(file_ptr=0):
                 file_ptr = file.tell()
                 file_buffer_size += MSS
             # total_data = [data[i:i+MSS] for i in range(0, len(data), MSS)]
-            total_data.append(data)
+            total_data.append([data, ((file_buffer_size/MSS) - 1) % WINDOW_SIZE])
 
 """
 Global variables
@@ -93,7 +103,7 @@ client_socket.connect(SERVER_HOST, SERVER_PORT)
 
 file_thread = threading.Thread(target=readFile)
 ack_thread = theading.Thread(target=ackHandler, args=(client_socket,))
-timer_thread = threading.Thread(target=timerHandler)
+# timer_thread = threading.Thread(target=timerHandler)
 file_thead.start()
 ack_thread.start()
 timer_thread.start()
