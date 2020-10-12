@@ -29,6 +29,7 @@ def ackHandler(client_socket):
     # listens for acknowledgments
     global timer
     global start_index
+    global file_buffer_size
     while True:
         ack_packet = client_socket.recv(64)
         # basic validity check
@@ -39,6 +40,8 @@ def ackHandler(client_socket):
                 # update the global values
                 timer[start_index] = 'a'
                 start_index += 1
+                # receive more in buffer
+                file_buffer_size -= MSS
 
 def timerHandler():
     # handles timers for each MSS unit
