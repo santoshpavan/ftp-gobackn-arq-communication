@@ -12,7 +12,8 @@ if (sys.argv[0] != "Simple_ftp_server"):
     print("Please enter correct command")
     sys.exit()
 
-START_TIME = time.time()
+# time in milliseconds
+START_TIME = time.time_ns()*1000000
 SERVER_HOST = sys.argv[1]
 SERVER_PORT = int(sys.argv[2])
 FILE_NAME = sys.argv[3]
@@ -20,7 +21,8 @@ WINDOW_SIZE = int(sys.argv[4])
 MSS = int(sys.argv[5])
 
 BUFFER_SIZE = MSS * 100
-TIMER = 1 #seconds
+# timer in milli seconds
+TIMER = 1000
 
 def ackHandler(client_socket):
     # listens for acknowledgments
@@ -30,7 +32,6 @@ def ackHandler(client_socket):
 def timerHandler():
     # handles timers for each MSS unit
     global timer
-    timer = ['n'] * BUFFER_SIZE
 
 def computeCheckSum(binary_data_list):
     temp_byte = "".join(['0']*16)
@@ -43,15 +44,16 @@ def computeCheckSum(binary_data_list):
             r += 1 if x[i] == '1' else 0
             r += 1 if temp_byte[i] == '1' else 0
             result = ('1' if r % 2 == 1 else '0') + result 
-            carry = 0 if r < 2 else 1     # Compute the carry.
-            
+            carry = 0 if r < 2 else 1
+        
+        # adding carry to the LSB
         for i in range(len(binary_data_list) - 1, -1, -1):
             if carry != 0:
                 r = carry 
                 r += 1 if x[i] == '1' else 0
                 r += 1 if temp_byte[i] == '1' else 0
                 result = ('1' if r % 2 == 1 else '0') + result 
-                carry = 0 if r < 2 else 1     # Compute the carry.
+                carry = 0 if r < 2 else 1
             else:
                 break
         temp_byte = result
@@ -79,15 +81,16 @@ def transmissionHandler():
     global total_data
     global start_index
     global transmission_index
+    global timer
     while True:
-        if total_data:
+        if total_data and transmission_index < start_index + WINDOW_SIZE:
             # create packet
             packet = createPacket()
-            # update timer of startInd
-            timerHandler()
             # send the data
-            
-
+            client_socket.send(packet)
+            # update timer of transmission_index
+            timer[transmission_index] = [TIMER, time.time_ns()*1000000]
+            transmission_index += 1
 
 def readFile(file_ptr=0):
     # reading the data from the file
@@ -115,8 +118,13 @@ Global variables
 file_buffer_size = 0
 # the data to be transmitted
 total_data = []
-# track the timers of each transmission
-timer = []
+"""
+timer - track the timers of each transmission
+Following states:   n - not assigned
+                    a - acknowledged
+                    [counter(ms), sent_time(ms)] - sent but not acknowledged
+"""
+timer =  timer = ['n'] * BUFFER_SIZE
 # indices required for transmission
 start_index = 0
 transmission_index = 0
@@ -124,11 +132,12 @@ transmission_index = 0
 # UDP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client_socket.connect(SERVER_HOST, SERVER_PORT)
+print("Connected to the server...")
 
 file_thread = threading.Thread(target=readFile)
-ack_thread = theading.Thread(target=ackHandler, args=(client_socket,))
-# timer_thread = threading.Thread(target=timerHandler)
-file_thead.start()
+ack_thread = threading.Thread(target=ackHandler, args=(client_socket,))
+timer_thread = threading.Thread(target=timerHandler)
+file_thread.start()
 ack_thread.start()
 timer_thread.start()
 
