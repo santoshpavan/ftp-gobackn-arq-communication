@@ -32,6 +32,24 @@ def ackHandler(client_socket):
 def timerHandler():
     # handles timers for each MSS unit
     global timer
+    global start_index
+    global transmission_index
+    while True:
+        for index in range(start_index, start_index + WINDOW_SIZE):
+            if timer[index] != 'n' and timer[index] != 'a':
+                time_now = time.time_ns() * 1000000
+                difference = timer[index][1] - time_now
+                new_counter = timer[index][0] - difference
+                if new_counter <= 0:
+                    # time out!
+                    start_index = index
+                    transmission_index = start_index
+                    # resetting timer for these to tranmit
+                    for index in range(start_index, start_index + WINDOW_SIZE):
+                        timer[index] = 'n'
+                    # break from for-loop
+                    break
+                timer[index] = [difference, time_now]
 
 def computeCheckSum(binary_data_list):
     temp_byte = "".join(['0']*16)
