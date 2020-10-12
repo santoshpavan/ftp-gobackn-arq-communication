@@ -32,8 +32,7 @@ def ackHandler(client_socket):
     while True:
         ack_packet = client_socket.recv(64)
         # basic validity check
-        if len(ack_packet) == 64 and ack_packet[48:] == "1010101010101010":
-            # TODO: checksum check for ACK. How as there is no data?
+        if len(ack_packet) == 64 and ack_packet[32:48] == "0"*16 and ack_packet[48:] == "10"*8:
             sequence_number = int(ack_packet[:32], 2)
             # checking if it is the expected ACK
             if total_data[start_index] != 'a' and total_data[start_index] != 'n' and sequence_number == timer[start_index][1]:
@@ -98,7 +97,7 @@ def createPacket():
     # sequence no
     h_field_1 = "{:032b}".format(total_data[transmission_index][1])
     # signifies this is a data datagram
-    h_field_3 = "0101010101010101"
+    h_field_3 = "01"*8
     # calculate checksum
     data_packet = total_data[transmission_index][0]
     binary_data_array = ["{:016b}".format(i) for i in bytearray(data_packet, "utf-8")]
