@@ -32,8 +32,31 @@ def timerHandler():
     global timer
     timer = ['n'] * BUFFER_SIZE
 
-def computeCheckSum(binary_data):
-    
+def computeCheckSum(binary_data_list):
+    temp_byte = "".join(['0']*16)
+    # Traverse the string
+    for x in binary_data_list:
+        result = '' 
+        carry = 0
+        for i in range(len(binary_data_list) - 1, -1, -1): 
+            r = carry 
+            r += 1 if x[i] == '1' else 0
+            r += 1 if temp_byte[i] == '1' else 0
+            result = ('1' if r % 2 == 1 else '0') + result 
+            carry = 0 if r < 2 else 1     # Compute the carry.
+            
+        for i in range(len(binary_data_list) - 1, -1, -1):
+            if carry != 0:
+                r = carry 
+                r += 1 if x[i] == '1' else 0
+                r += 1 if temp_byte[i] == '1' else 0
+                result = ('1' if r % 2 == 1 else '0') + result 
+                carry = 0 if r < 2 else 1     # Compute the carry.
+            else:
+                break
+        temp_byte = result
+    return temp_byte
+
 
 def createPacket():
     global transmission_index
@@ -45,11 +68,11 @@ def createPacket():
     h_field_3 = "0101010101010101"
     # calculate checksum
     data_packet = total_data[transmission_index][0]
-    binary_data_array = ["{:08b}".format(i) for i in bytearray(data_packet, "utf-8")]
-    computeCheckSum(binary_data_array)
+    binary_data_array = ["{:016b}".format(i) for i in bytearray(data_packet, "utf-8")]
+    h_field_2 = computeCheckSum(binary_data_array)
     # add it to the data
-
-    return 
+    total_packet = h_field_1 + h_field_2 + h_field_3 + data_packet
+    return total_packet
 
 def transmissionHandler():
     # transmits data
@@ -59,10 +82,11 @@ def transmissionHandler():
     while True:
         if total_data:
             # create packet
-            createPacket()
+            packet = createPacket()
             # update timer of startInd
             timerHandler()
             # send the data
+            
 
 
 def readFile(file_ptr=0):
