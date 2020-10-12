@@ -10,17 +10,17 @@ Command:
 Simple_ftp_server server-host-name server-port# file-name N MSS
 """
 # checking validity of command
-if (sys.argv[0] != "Simple_ftp_server"):
+if (sys.argv[1] != "Simple_ftp_server"):
     print("Please enter correct command")
     sys.exit()
 
 # time in milliseconds
 START_TIME = time.time_ns()*1000000
-SERVER_HOST = sys.argv[1]
-SERVER_PORT = int(sys.argv[2])
-FILE_NAME = sys.argv[3]
-WINDOW_SIZE = int(sys.argv[4])
-MSS = int(sys.argv[5])
+SERVER_HOST = sys.argv[2]
+SERVER_PORT = int(sys.argv[3])
+FILE_NAME = sys.argv[4]
+WINDOW_SIZE = int(sys.argv[5])
+MSS = int(sys.argv[6])
 
 BUFFER_SIZE = MSS * 100
 # timer in milli seconds
@@ -28,6 +28,7 @@ TIMER = 1000
 
 def ackHandler(client_socket):
     # listens for acknowledgments
+    # print("Listening for ACKs...")
     global timer
     global start_index
     global file_buffer_size
@@ -47,9 +48,11 @@ def ackHandler(client_socket):
 
 def timerHandler():
     # handles timers for each MSS unit
+    # print("Timer...")
     global timer
     global start_index
     global transmission_index
+    global TIMER
     while True:
         for index in range(start_index, start_index + WINDOW_SIZE):
             if timer[index] != 'n' and timer[index] != 'a':
@@ -58,6 +61,8 @@ def timerHandler():
                 new_counter = timer[index][0] - difference
                 if new_counter <= 0:
                     # time out!
+                    print(f"Timeout, Sequence Number = {total_data[index][1]}")
+                    TIMER *= 2
                     start_index = index
                     transmission_index = start_index
                     # resetting timer for these to tranmit
@@ -73,15 +78,15 @@ def computeCheckSum(binary_data_list):
     for x in binary_data_list:
         temp_byte = '' 
         carry = 0
-        for i in range(len(binary_data_list) - 1, -1, -1): 
-            r = carry 
+        for i in range(len(x) - 1, -1, -1): 
+            r = carry
             r += 1 if x[i] == '1' else 0
             r += 1 if result[i] == '1' else 0
             temp_byte = ('1' if r % 2 == 1 else '0') + temp_byte 
             carry = 0 if r < 2 else 1
         
         # adding carry to the LSB
-        for i in range(len(binary_data_list) - 1, -1, -1):
+        for i in range(len(x) - 1, -1, -1):
             if carry != 0:
                 r = carry 
                 r += 1 if x[i] == '1' else 0
@@ -113,22 +118,26 @@ def createPacket():
 
 def transmissionHandler():
     # transmits data
+    # print("Transmitting...")
     global total_data
     global start_index
     global transmission_index
     global timer
     while True:
-        if total_data and transmission_index < start_index + WINDOW_SIZE:
+        if (    total_data and 
+                transmission_index < start_index + WINDOW_SIZE and 
+                transmission_index < len(total_data)):
             # create packet
             packet = createPacket()
             # send the data
-            client_socket.send(packet)
+            # client_socket.send(packet)
             # update timer of transmission_index
             timer[transmission_index] = [TIMER, time.time_ns()*1000000]
             transmission_index += 1
 
 def readFile(file_ptr=0):
     # reading the data from the file
+    # print("Reading...")
     global total_data
     global file_buffer_size
     file_buffer_size = 0
@@ -145,7 +154,8 @@ def readFile(file_ptr=0):
                 file_ptr = file.tell()
                 file_buffer_size += MSS
             # total_data = [data[i:i+MSS] for i in range(0, len(data), MSS)]
-            total_data.append([data, ((file_buffer_size/MSS) - 1) % WINDOW_SIZE])
+            # cyclical sequence numbers of range [0, N-1]
+            total_data.append([data, int(((file_buffer_size/MSS) - 1) % WINDOW_SIZE)])
 
 
 """
@@ -168,7 +178,8 @@ transmission_index = 0
 
 # UDP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client_socket.connect(SERVER_HOST, SERVER_PORT)
+# client_socket.connect(SERVER_HOST, SERVER_PORT)
+client_socket.connect((socket.gethostname(), 80))
 print("Connected to the server...")
 
 file_thread = threading.Thread(target=readFile)
