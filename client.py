@@ -27,7 +27,9 @@ TIMER = 1000
 def ackHandler(client_socket):
     # listens for acknowledgments
     while True:
-        client_socket.recv(MSS + 8)
+        ack_packet = client_socket.recv(64)
+        
+
 
 def timerHandler():
     # handles timers for each MSS unit
@@ -52,16 +54,16 @@ def timerHandler():
                 timer[index] = [difference, time_now]
 
 def computeCheckSum(binary_data_list):
-    temp_byte = "".join(['0']*16)
+    result = "".join(['0']*16)
     # Traverse the string
     for x in binary_data_list:
-        result = '' 
+        temp_byte = '' 
         carry = 0
         for i in range(len(binary_data_list) - 1, -1, -1): 
             r = carry 
             r += 1 if x[i] == '1' else 0
-            r += 1 if temp_byte[i] == '1' else 0
-            result = ('1' if r % 2 == 1 else '0') + result 
+            r += 1 if result[i] == '1' else 0
+            temp_byte = ('1' if r % 2 == 1 else '0') + temp_byte 
             carry = 0 if r < 2 else 1
         
         # adding carry to the LSB
@@ -69,13 +71,15 @@ def computeCheckSum(binary_data_list):
             if carry != 0:
                 r = carry 
                 r += 1 if x[i] == '1' else 0
-                r += 1 if temp_byte[i] == '1' else 0
-                result = ('1' if r % 2 == 1 else '0') + result 
+                r += 1 if result[i] == '1' else 0
+                temp_byte = ('1' if r % 2 == 1 else '0') + temp_byte 
                 carry = 0 if r < 2 else 1
             else:
                 break
-        temp_byte = result
-    return temp_byte
+        result = temp_byte
+    # 1's compliment
+    result = ''.join(['1' if (i == '0') else '0' for i in result])
+    return result
 
 
 def createPacket():
