@@ -1,3 +1,4 @@
+# pylint: skip-file
 import socket
 import sys
 import threading
@@ -30,11 +31,12 @@ def ackHandler(client_socket):
     global start_index
     while True:
         ack_packet = client_socket.recv(64)
-        # TODO: checksum check for ACK. How as there is no data?
-        sequence_number = int(ack_packet[:32], 2)
-        # update the global values
-        timer[sequence_number] = 'a'
-        start_index += 1
+        if ack_packet:
+            # TODO: checksum check for ACK. How as there is no data?
+            sequence_number = int(ack_packet[:32], 2)
+            # update the global values
+            timer[sequence_number] = 'a'
+            start_index += 1
 
 def timerHandler():
     # handles timers for each MSS unit
