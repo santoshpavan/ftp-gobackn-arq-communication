@@ -31,12 +31,15 @@ def ackHandler(client_socket):
     global start_index
     while True:
         ack_packet = client_socket.recv(64)
-        if ack_packet:
+        # basic validity check
+        if len(ack_packet) == 64 and ack_packet[48:] == "1010101010101010":
             # TODO: checksum check for ACK. How as there is no data?
             sequence_number = int(ack_packet[:32], 2)
-            # update the global values
-            timer[sequence_number] = 'a'
-            start_index += 1
+            # checking if it is the expected ACK
+            if total_data[start_index] != 'a' and total_data[start_index] != 'n' and sequence_number == timer[start_index][1]:
+                # update the global values
+                timer[start_index] = 'a'
+                start_index += 1
 
 def timerHandler():
     # handles timers for each MSS unit
@@ -88,7 +91,6 @@ def computeCheckSum(binary_data_list):
     result = ''.join(['1' if (i == '0') else '0' for i in result])
     return result
 
-
 def createPacket():
     global transmission_index
     global total_data
@@ -139,6 +141,7 @@ def readFile(file_ptr=0):
                 file_buffer_size += MSS
             # total_data = [data[i:i+MSS] for i in range(0, len(data), MSS)]
             total_data.append([data, ((file_buffer_size/MSS) - 1) % WINDOW_SIZE])
+
 
 """
 Global variables
