@@ -26,10 +26,15 @@ TIMER = 1000
 
 def ackHandler(client_socket):
     # listens for acknowledgments
+    global timer
+    global start_index
     while True:
         ack_packet = client_socket.recv(64)
-        
-
+        # TODO: checksum check for ACK. How as there is no data?
+        sequence_number = int(ack_packet[:32], 2)
+        # update the global values
+        timer[sequence_number] = 'a'
+        start_index += 1
 
 def timerHandler():
     # handles timers for each MSS unit
@@ -47,8 +52,8 @@ def timerHandler():
                     start_index = index
                     transmission_index = start_index
                     # resetting timer for these to tranmit
-                    for index in range(start_index, start_index + WINDOW_SIZE):
-                        timer[index] = 'n'
+                    for i in range(start_index, start_index + WINDOW_SIZE):
+                        timer[i] = 'n'
                     # break from for-loop
                     break
                 timer[index] = [difference, time_now]
