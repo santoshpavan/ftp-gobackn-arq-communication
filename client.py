@@ -3,6 +3,7 @@ import socket
 import sys
 import threading
 import time
+from collections import deque
 
 """
 Command:
@@ -36,12 +37,13 @@ def ackHandler(client_socket):
         if len(ack_packet) == 64 and ack_packet[32:48] == "0"*16 and ack_packet[48:] == "10"*8:
             sequence_number = int(ack_packet[:32], 2)
             # checking if it is the expected ACK
-            if total_data[start_index] != 'a' and total_data[start_index] != 'n' and sequence_number == timer[start_index][1]:
+            if total_data and total_data[start_index] != 'a' and total_data[start_index] != 'n' and sequence_number == timer[start_index][1]:
                 # update the global values
                 timer[start_index] = 'a'
                 start_index += 1
                 # receive more in buffer
-                file_buffer_size -= MSS
+                # file_buffer_size -= MSS
+                total_data.popleft()
 
 def timerHandler():
     # handles timers for each MSS unit
@@ -131,7 +133,8 @@ def readFile(file_ptr=0):
     global file_buffer_size
     file_buffer_size = 0
     while True:
-        if file_buffer_size < BUFFER_SIZE:
+        # if file_buffer_size < BUFFER_SIZE:
+        if len(total_data) < BUFFER_SIZE:
             with open(FILE_NAME) as file:
                 # setting to continue where we left off
                 file.seek(file_ptr)
@@ -151,7 +154,7 @@ Global variables
 # to keep track of the file reading buffer
 file_buffer_size = 0
 # the data to be transmitted
-total_data = []
+total_data = deque()
 """
 timer - track the timers of each transmission
 Following states:   n - not assigned
