@@ -29,7 +29,6 @@ def ackHandler(client_socket):
             # updating the status
 
             timer_lock.acquire()
-
             if total_data and timer[start_index] != 'n':
                 # need to ACK from start to ind of sequence
                 end_ind = start_index + WINDOW_SIZE
@@ -115,7 +114,6 @@ def transmissionHandler(client_socket):
     while not is_file_sent:
         if (    total_data and transmission_index < len(total_data) and
                 transmission_index < start_index + WINDOW_SIZE ):
-            print(f"tx: {total_data[transmission_index][1]}")
             # create packet
             packet = createPacket()
             # send the data
