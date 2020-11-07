@@ -29,7 +29,6 @@ def ackHandler(client_socket):
             # updating the status
 
             timer_lock.acquire()
-            # print('***ack-acquired')
 
             if total_data and timer[start_index] != 'n':
                 # need to ACK from start to ind of sequence
@@ -76,6 +75,7 @@ def timerHandler():
                 
                 timer[index] = [difference, time_now]
             timer_lock.release()
+        # forcing thread yield
         time.sleep( 0.05 )
 
 def computeCheckSum(data):
@@ -124,6 +124,7 @@ def transmissionHandler(client_socket):
             timer[transmission_index] = [TIMER, round(time.time())]
             transmission_index += 1
         else:
+            # forcing thread yield
             time.sleep( 0.05 )
 
 def readFile(file_ptr=0):
@@ -139,7 +140,7 @@ def readFile(file_ptr=0):
             file.seek(file_ptr)
             data = file.read(MSS)
             if not data:
-                # file has been read
+                # file has been read completely
                 is_file_read = True
                 break
             file_ptr = file.tell()
