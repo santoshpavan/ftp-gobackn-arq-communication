@@ -3,7 +3,6 @@ import socket
 import sys
 import threading
 import time
-from collections import deque
 import struct
 
 def ackHandler(client_socket):
@@ -153,7 +152,7 @@ Command:
 Simple_ftp_server server-host-name server-port# file-name N MSS
 """
 # checking validity of command
-if (len(sys.argv) != 7 or sys.argv[1] != "Simple_ftp_server"):
+if len(sys.argv) != 7 or sys.argv[1] != "Simple_ftp_server":
     print("Please enter correct command")
     sys.exit()
 
@@ -168,6 +167,7 @@ FILE_NAME = sys.argv[4]
 WINDOW_SIZE = int(sys.argv[5])
 MSS = int(sys.argv[6])
 
+CLIENT_PORT  = 1234
 BUFFER_SIZE = MSS * 100
 ACK_SIZE = 8192
 TIMER = 1
@@ -194,8 +194,8 @@ transmission_index = 0
 
 # UDP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client_socket.bind((socket.gethostname(), SERVER_PORT))
-print("Connected to the server...")
+client_socket.bind((socket.gethostname(), CLIENT_PORT))
+print(f"Connected to the server at port: {SERVER_PORT}")
 
 file_thread = threading.Thread(target=readFile)
 ack_thread = threading.Thread(target=ackHandler, args=(client_socket,))
