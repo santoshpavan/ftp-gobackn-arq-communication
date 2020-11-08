@@ -15,7 +15,6 @@ def ackHandler(client_socket):
     global timer_lock
 
     while not is_file_sent:
-        # print('a', end='')
         if is_file_read and timer[len(timer) - 1] == 'a':
             # ACK'ed the entire file
             is_file_sent = True
@@ -27,20 +26,10 @@ def ackHandler(client_socket):
             sequence_number = header[0]
             # updating the status
             timer_lock.acquire()
-            # print(f"ack seqno: {sequence_number}, start seqno:{total_data[start_index][1]}")
-            """
-            if total_data and total_data[start_index] != 'n': 
-                if sequence_number == total_data[start_index][1]:
-                    # update the global values
-                    # print(f"ack seqno: {sequence_number}")
-                    timer[start_index] = 'a'
-                    start_index += 1
-            """
             if total_data and timer[start_index] != 'n':
                 # cumulative ACKs
                 while start_index <= transmission_index:
                     timer[start_index] = 'a'
-                    # timer_lock.release()
                     if total_data[start_index][1] == sequence_number:
                         start_index += 1
                         break
@@ -48,44 +37,6 @@ def ackHandler(client_socket):
             
             timer_lock.release()
 
-"""
-def timerHandler():
-    # handles timers for each MSS unit
-    global timer
-    global start_index
-    global transmission_index
-    global TIMER
-    global timer_lock
-    global is_file_sent
-
-    while not is_file_sent:
-        end_ind = start_index + WINDOW_SIZE
-        for index in range(start_index, end_ind):
-            # timer_lock.acquire()
-            if index < len(timer) and timer[index] != 'n' and timer[index] != 'a':
-                time_now = round(time.time(), 2)
-                difference = time_now - timer[index]
-                # new_counter = timer[index][0] - difference
-                if difference <= TIMER:
-                    # time out!
-                    # print(f"Timeout, Sequence Number = {total_data[index][1]}")
-                    # double the timer in the event of the timeout
-                    # TIMER *= 2
-                    start_index = index
-                    transmission_index = start_index
-                    # resetting timer for these to transmit
-                    ## for i in range(start_index, start_index + WINDOW_SIZE):
-                    ##     if i < len(timer):
-                    ##         timer[i] = 'n'
-                    # break from for-loop
-                    # timer_lock.release()
-                    break
-                timer_lock.acquire()
-                timer[index] = [difference, time_now]
-                timer_lock.release()
-        # forcing thread yield
-        # time.sleep( 0.05 )
-"""
 
 def computeCheckSum(data):
     checksum = 0
@@ -101,26 +52,9 @@ def computeCheckSum(data):
         checksum = sum + carry
     # 1's compliment
     checksum = (~checksum) & 0xFFFF
-    # print(checksum)
-    # checksum = 0
-    # val = len(data) % 2
-    # flag = 0
-    # if val != 0:
-    #     flag = 1
-    #     data = data + '0' if flag == 1 else data
-    #     i = 0
-    #     while i < len(data):
-    #         blockSum = checksum + ord(data[i]) + (ord(data[i + 1]) << 8)
-    #         checksum = (blockSum & 0xFFFF) + (blockSum >> 16)
-    #         i += 2
-    # checksum = (~checksum) & 0xFFFF
-    # print(checksum)
-    # print("-------")
     return checksum
 
 def createPacket(transmission_index, total_data):
-    # global transmission_index
-    # global total_data
     # IHH -> 4 + 2 + 2 bytes
     header = struct.pack('!IHH', total_data[transmission_index][1], computeCheckSum(total_data[transmission_index][0]), 0b0101010101010101)
     total_packet = header + str(total_data[transmission_index][0]).encode()
@@ -131,8 +65,6 @@ def isStartTimedOut(start_index, timer):
     difference = 0
     if timer[start_index] != 'n':
         difference = time_now - timer[start_index]
-    # except:
-    # print(start_index, len(timer), timer[start_index])
     return difference >= TIMER
 
 def transmissionHandler(client_socket):
@@ -145,7 +77,6 @@ def transmissionHandler(client_socket):
     global timer_lock
 
     while not is_file_sent:
-        # print(transmission_index, start_index, len(total_data))
         timer_lock.acquire()
         if total_data and transmission_index < len(total_data) and transmission_index < start_index + WINDOW_SIZE :
             # check if timeout
@@ -156,10 +87,8 @@ def transmissionHandler(client_socket):
             # create packet
             packet = createPacket(transmission_index, total_data)
             # send the data
-            # print("tx", total_data[transmission_index][1])
             client_socket.sendto(packet, (socket.gethostname(), 7735))
             # update timer of transmission_index
-            # timer[transmission_index] = [TIMER, round(time.time())]
             timer[transmission_index] = round(time.time())
             transmission_index += 1
         elif start_index < len(total_data) and isStartTimedOut(start_index, timer):
@@ -167,10 +96,6 @@ def transmissionHandler(client_socket):
             print(f"Timeout, Sequence Number = {total_data[start_index][1]}")
             transmission_index = start_index
         timer_lock.release()
-        # else:
-        #     print("----", transmission_index, len(total_data))
-        #     # forcing thread yield
-        #     time.sleep( 0.05 )
 
 def readFile(file_ptr=0):
     # reading the data from the file
@@ -186,12 +111,9 @@ def readFile(file_ptr=0):
             data = file.read(MSS)
             if not data:
                 # file has been read completely
-                # print('-------------FILE READ DONE!')
                 is_file_read = True
                 break
             file_ptr = file.tell()
-        # total_data.append([data, seg_no * MSS])
-        # print("read: ", seg_no)
         total_data.append([data, seg_no])
         seg_no += 1
         timer.append('n')
@@ -248,11 +170,8 @@ print(f"Connected to the server at port: {SERVER_PORT}")
 
 file_thread = threading.Thread(target=readFile)
 ack_thread = threading.Thread(target=ackHandler, args=(client_socket,))
-# timer_thread = threading.Thread(target=timerHandler)
-
 START_TIME = time.time()
 file_thread.start()
-# timer_thread.start()
 ack_thread.start()
 
 # main thread is transmitting
