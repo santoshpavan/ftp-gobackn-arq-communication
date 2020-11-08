@@ -197,7 +197,6 @@ def readFile(file_ptr=0):
         timer.append('n')
 
 
-
 """
 Command:
 Simple_ftp_server server-host-name server-port# file-name N MSS
@@ -251,17 +250,19 @@ file_thread = threading.Thread(target=readFile)
 ack_thread = threading.Thread(target=ackHandler, args=(client_socket,))
 # timer_thread = threading.Thread(target=timerHandler)
 
-START_TIME = round(time.time())
-
+START_TIME = time.time()
 file_thread.start()
 # timer_thread.start()
 ack_thread.start()
 
 # main thread is transmitting
 transmissionHandler(client_socket)
+# sending termination packet
+header = struct.pack('!IHH', total_data[-1][1], computeCheckSum(total_data[-1][0]), 0b0101010101010101)
+client_socket.sendto(header, (socket.gethostname(), 7735))
 
 # terminate
 client_socket.close()
 
-END_TIME = round(time.time())
-print("Transfer completed. Time taken: ", END_TIME - START_TIME)
+END_TIME = time.time()
+print("Transfer completed. Time taken: ", round(END_TIME - START_TIME, 5))

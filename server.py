@@ -56,6 +56,8 @@ def receivingHandler(server_socket):
         # IHH -> 4 + 2 + 2 bytes
         header = struct.unpack('!IHH', client_packet[:8])
         data = client_packet[8:].decode()
+        if not data:
+            break
         loss_val = random.random()
         # print("loss_thresh: ", loss_thresh, LOSS_PROB, isChecksumValid(data, header[1]))
         seq_no = header[0]
@@ -83,7 +85,7 @@ def receivingHandler(server_socket):
             #             break
             #         ind += 1
         else:
-            print(f"dropped: {seq_no} loss:{loss_val}")
+            print(f"dropped: {seq_no}")
             expected_seq = seq_no
         # time.sleep(0.05)
 
@@ -120,3 +122,4 @@ if old_file.is_file():  # or p.is_dir() to see if it is a directory
 # main thread for acks
 receivingHandler(server_socket)
 # ackHandler(server_socket)
+print("Receiving completed")
