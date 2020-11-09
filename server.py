@@ -8,11 +8,13 @@ import struct
 import random
 import pathlib
 
+"""
 def ackHandler(server_socket, ack_ind, seq_no, client_address):
     if ack_ind < len(received_sequences):
         ack_packet = struct.pack('!IHH', seq_no, 0, 0b1010101010101010)
         server_socket.sendto(ack_packet, client_address)
         ack_ind += 1
+"""
 
 def isChecksumValid(data, receivedCheckSum):
     checksum = 0
@@ -34,26 +36,46 @@ def receivingHandler(server_socket):
     global received_sequences
     global client_address
     global expected_seq
+
+    file = open(FILE_NAME, 'w')
+
     while True:
         client_packet, client_address = server_socket.recvfrom(PACKET_SIZE)
         # IHH -> 4 + 2 + 2 bytes
         header = struct.unpack('!IHH', client_packet[:8])
         data = client_packet[8:].decode()
         if not data:
+            file.close()
             break
         loss_val = random.random()
         seq_no = header[0]
-        if (    header[2] == 0b0101010101010101 and loss_val > LOSS_PROB and isChecksumValid(data, header[1])):
-            if seq_no <= expected_seq:
-                if seq_no not in received_sequences:
-                    received_sequences.append(seq_no)
-                    with open(FILE_NAME, 'a') as file:
+        
+        # sanity check
+        if header[2] == 0b0101010101010101 and isChecksumValid(data, header[1]):
+            if loss_val > LOSS_PROB:
+                # send ack
+                if seq_no <= expected_seq:
+                    ack_packet = struct.pack('!IHH', seq_no, 0, 0b1010101010101010)
+                    server_socket.sendto(ack_packet, client_address)
+                    if seq_no == expected_seq:
                         file.write(data)
-                expected_seq = seq_no + 1
-                ackHandler(server_socket, ack_ind, seq_no, client_address)
-        else:
-            print(f"dropped: {seq_no}")
-            expected_seq = seq_no
+                        # with open(FILE_NAME, 'a') as file:
+                            # file.write(data)
+                        expected_seq = seq_no + 1
+            else:
+                print(f"Packet loss, sequence number: {seq_no}")
+
+        # if (    header[2] == 0b0101010101010101 and loss_val > LOSS_PROB and isChecksumValid(data, header[1])):
+        #     if seq_no <= expected_seq:
+        #         if seq_no not in received_sequences:
+        #             received_sequences.append(seq_no)
+        #             with open(FILE_NAME, 'a') as file:
+        #                 file.write(data)
+        #         expected_seq = seq_no + 1
+        #         ackHandler(server_socket, ack_ind, seq_no, client_address)
+        # else:
+        #     print(f"Packet loss, sequence number: {seq_no}")
+        #     expected_seq = seq_no
 
 # taking inputs
 if len(sys.argv) != 5 or sys.argv[1] != "Simple_ftp_server":
@@ -72,6 +94,7 @@ expected_seq = 0
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind((socket.gethostname(), SERVER_PORT))
+# server_socket.settimeout(32)
 print(f"Server connected at port: {SERVER_PORT}")
 
 # deleting already existing file
