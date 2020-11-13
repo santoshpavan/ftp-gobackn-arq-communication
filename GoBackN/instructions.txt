@@ -1,0 +1,10 @@
+The implementation has been done using Python 3.8.2 in Windows Subsystem of Linux - Ubuntu
+Please enter the following commands for the execution
+
+Client:
+python3 client.py Simple_ftp_server server-host-name server-port# file-name N MSS
+eg: python3 client.py Simple_ftp_server DESKTOP-2TEIMNG 7735 transfer-file.txt 64 500
+
+Server:
+python3 server.py Simple_ftp_server port# file-name p
+eg: python3 server.py Simple_ftp_server 7735 output.txt 0.05
